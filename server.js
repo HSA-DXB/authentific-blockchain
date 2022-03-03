@@ -18,6 +18,7 @@ const crypto = require("crypto");
 const dirname = path.resolve();
 const Binance = require("./Model");
 var PATH = "uploads/";
+var DPATH = "public/temp";
 
 const connectDB = async () => {
   try {
@@ -157,7 +158,6 @@ app.post(
       obj.ipfsId = ipfsId;
       obj.hash = hashes;
       obj.size = sizes;
-      console.log({ obj });
       res.status(200).send(obj);
     }
   }
@@ -205,7 +205,14 @@ app.post("/api/download-file-blockchain", async function (req, res) {
   const ipfsData = await axios.post(
     `https://ipfs.infura.io:5001/api/v0/cat?arg=${ipfsFileHash}`
   );
-
+  try {
+    findRemoveSync(DPATH, {
+      age: { seconds: 10800 },
+      files: "*.*",
+    });
+  } catch (error) {
+    console.log(error);
+  }
   const myStr = ipfsData.data.split(":");
   let pdfSha256Hash = myStr[0];
   let pdfSize = myStr[2];
@@ -249,6 +256,28 @@ app.post("/api/download-file-blockchain", async function (req, res) {
     hash: pdfEncryptedString,
   });
 });
+
+app.post(
+  "/api/get-sha-256Hash",
+  upload.single("file"),
+  async function (req, res) {
+    const sha256Hasher = crypto.createHmac("sha256", process.env.SECRETKEY);
+    const hash = sha256Hasher
+      .update(fs.readFileSync(req.file.path))
+      .digest("hex");
+    try {
+      findRemoveSync(PATH, {
+        age: { seconds: 10 },
+        files: "*.*",
+      });
+    } catch (error) {
+      console.log(error);
+    }
+    res.status(200).send({ hash });
+  }
+);
+
+//
 
 //end here------------------------------------------------------------------------
 var dir = `${__dirname}/public`;
