@@ -31,15 +31,21 @@ const connectDB = async () => {
     console.log(error);
   }
 };
+
 connectDB();
+
 const app = express();
+
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(cors({ credentials: true, origin: "*" }));
 app.use(express.json());
+
 const PROJECTID = process.env.PROJECTID;
 const PROJECTSECRET = process.env.PROJECTSECRET;
+
 const auth =
   "Basic " + Buffer.from(PROJECTID + ":" + PROJECTSECRET).toString("base64");
+
 const ipfs = create({
   host: "ipfs.infura.io",
   port: 5001,
@@ -54,9 +60,7 @@ const secretKey = process.env.SECRETKEY;
 const iv = crypto.randomBytes(16);
 const encrypt = (text) => {
   const cipher = crypto.createCipheriv(algorithm, secretKey, iv);
-
   const encrypted = Buffer.concat([cipher.update(text), cipher.final()]);
-
   return {
     iv: iv.toString("hex"),
     content: encrypted.toString("hex"),
@@ -77,11 +81,13 @@ const decrypt = (hash) => {
 
   return decrpyted;
 };
+
 try {
   fs.mkdirSync(PATH);
 } catch (e) {
   if (e.code != "EEXIST") throw e;
 }
+
 let storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, PATH);
@@ -94,85 +100,73 @@ let storage = multer.diskStorage({
 let upload = multer({
   storage: storage,
 });
+
 const uid = new ShortUniqueId({ length: 10 });
 
-app.post(
-  "/api/upload-ipfs",
-  upload.array("files", 5),
-  async function (req, res) {
+app.post("/api/upload-ipfs", upload.single("file"), async function (req, res) {
+  try {
+    findRemoveSync(PATH, {
+      age: { seconds: 10 },
+      files: "*.*",
+    });
+  } catch (error) {
+    console.log(error);
+  }
+
+  if (!req.file) {
+    console.log("No file is available!");
+    return res.send({
+      success: false,
+    });
+  } else {
+    const sha256Hasher = crypto.createHmac("sha256", process.env.SECRETKEY);
+    const preEncryption = encrypt(Buffer.from(fs.readFileSync(req.file.path)));
+    const finalEncryption = `${preEncryption.iv} ${preEncryption.content}`;
+    const hash = sha256Hasher
+      .update(fs.readFileSync(req.file.path))
+      .digest("hex");
     try {
-      findRemoveSync(PATH, {
-        age: { seconds: 10 },
-        files: "*.*",
+      const ipfsResult = await ipfs.add(
+        `${finalEncryption}:${hash}:${req.file.size}`,
+        function (err, file) {
+          if (err) {
+            console.log(err);
+          }
+        }
+      );
+
+      let blockchain = {};
+
+      blockchain.mainFileId = req.body.id;
+      blockchain["fileName"] = req.file.originalname;
+      res.status(200).json({
+        mainFileId: req.body.id,
+        fileName: req.file.originalname,
+        hash: hash,
+        size: req.file.size,
+        ipfsLink: ipfsResult.path,
       });
     } catch (error) {
-      console.log(error);
+      console.log({ error });
+      res.status(400).send("Something went wrong!");
     }
-    if (!req.files) {
-      console.log("No file is available!");
-      return res.send({
-        success: false,
-      });
-    } else {
-      const obj = {};
-      const ipfsLink = [];
-      const ipfsId = [];
-      let fileList = [];
-      let hashes = [];
-      let sizes = [];
-      for (let i = 0; i < req.files.length; i++) {
-        const sha256Hasher = crypto.createHmac("sha256", process.env.SECRETKEY);
-        const preEncryption = encrypt(
-          Buffer.from(fs.readFileSync(req.files[i].path))
-        );
-        const finalEncryption = `${preEncryption.iv} ${preEncryption.content}`;
-        const hash = sha256Hasher
-          .update(fs.readFileSync(req.files[i].path))
-          .digest("hex");
-        try {
-          const ipfsResult = await ipfs.add(
-            `${finalEncryption}:${hash}:${req.files[i].size}`,
-            function (err, file) {
-              if (err) {
-                console.log(err);
-              }
-            }
-          );
-          const generatedId = uid();
-          let blockchain = {};
-          blockchain["blockChainFileId"] = generatedId;
-          blockchain.mainFileId = req.body.id;
-          blockchain["fileName"] = req.files[i].originalname;
-          fileList.push(blockchain);
-          hashes.push(hash);
-          sizes.push(req.files[i].size);
-          ipfsLink.push(ipfsResult.path);
-          ipfsId.push(generatedId);
-        } catch (error) {
-          console.log({ error });
-        }
-      }
 
-      obj.fileList = fileList;
-      obj.ipfsLink = ipfsLink;
-      obj.ipfsId = ipfsId;
-      obj.hash = hashes;
-      obj.size = sizes;
-      res.status(200).send(obj);
-    }
+    // obj.fileList = fileList;
+    // obj.ipfsLink = ipfsLink;
+    // obj.ipfsId = ipfsId;
+    // obj.hash = hashes;
+    // obj.size = sizes;
   }
-);
+});
 
 app.post("/api/save-database", async function (req, res) {
   const { uploadIpfsRes } = req.body;
-  uploadIpfsRes.fileList.forEach(async (blockchain) => {
-    let updatedCandidate = await Binance.create({
-      blockChainFileId: blockchain.blockChainFileId,
-      mainFileId: blockchain.mainFileId,
-      fileName: blockchain.fileName,
-      transaction: uploadIpfsRes.transactionHistory,
-      hash: uploadIpfsRes.hash.toString(),
-    });
+
+  let updatedCandidate = await Binance.create({
+    mainFileId: uploadIpfsRes.mainFileId,
+    fileName: uploadIpfsRes.fileName,
+    transaction: uploadIpfsRes.transactionHistory,
+    hash: uploadIpfsRes.hash.toString(),
   });
 
   res.status(200).json("upload complete");
@@ -232,18 +226,23 @@ app.post("/api/download-file-blockchain", async function (req, res) {
   const decryptbuffer = decrypt(hash);
   //converting buffer to image
   const pdf1 = decryptbuffer;
-  const renderedPages = await gs.renderPDFPagesToPNG(pdf1);
 
-  fs.writeFile(
-    `${dir2}/${ipfsFileHash}.jpg`,
-    renderedPages[0],
-    function (err, written) {
-      if (err) console.log(err);
-      else {
-        console.log("Successfully written");
+  try {
+    const renderedPages = await gs.renderPDFPagesToPNG(pdf1);
+    fs.writeFile(
+      `${dir2}/${ipfsFileHash}.jpg`,
+      renderedPages[0],
+      function (err, written) {
+        if (err) console.log(err);
+        else {
+          console.log("Successfully written");
+        }
       }
-    }
-  );
+    );
+  } catch (error) {
+    console.log(error);
+  }
+
   //done converting
   //res.json(response);
   fs.writeFile(`${dir2}/${ipfsFileHash}.pdf`, decryptbuffer, (err) => {

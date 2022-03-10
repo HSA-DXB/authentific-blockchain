@@ -18,10 +18,6 @@ const binanceSchema = mongoose.Schema(
       type: "string",
       required: false,
     },
-    blockChainFileId: {
-      type: "string",
-      required: false,
-    },
     mainFileId: {
       type: "string",
       required: false,
