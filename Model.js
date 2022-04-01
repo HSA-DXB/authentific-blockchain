@@ -18,12 +18,21 @@ const binanceSchema = mongoose.Schema(
       type: "string",
       required: false,
     },
+    fileSize: {
+      type: "number",
+      required: false,
+    },
+
     mainFileId: {
       type: "string",
       required: false,
     },
     hash: {
       type: "string",
+    },
+    createdAt: {
+      type: "string",
+      default: Date.now(),
     },
   },
 

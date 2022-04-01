@@ -167,6 +167,7 @@ app.post("/api/save-database", async function (req, res) {
     fileName: uploadIpfsRes.fileName,
     transaction: uploadIpfsRes.transactionHistory,
     hash: uploadIpfsRes.hash.toString(),
+    fileSize: uploadIpfsRes.size,
   });
 
   res.status(200).json("upload complete");
