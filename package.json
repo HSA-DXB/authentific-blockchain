@@ -44,6 +44,6 @@
     "@nomiclabs/hardhat-ethers": "^2.0.5",
     "ethereum-waffle": "^3.4.0",
     "ethers": "^5.5.4",
-    "nodemon": "^2.0.12"
+    "nodemon": "^2.0.15"
   }
 }
