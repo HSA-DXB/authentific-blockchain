@@ -170,7 +170,7 @@ app.post("/api/save-database", async function (req, res) {
     fileSize: uploadIpfsRes.size,
   });
 
-  res.status(200).json("upload complete");
+  res.status(200).json(updatedCandidate);
 });
 
 app.post("/api/get-blockchain-file", async function (req, res) {
