@@ -8,7 +8,6 @@ const bodyParser = require("body-parser");
 const { create } = require("ipfs-http-client");
 const mongoose = require("mongoose");
 const findRemoveSync = require("find-remove");
-const ShortUniqueId = require("short-unique-id");
 const fs = require("fs");
 const gs = require("ghostscript-node");
 
@@ -100,8 +99,6 @@ let storage = multer.diskStorage({
 let upload = multer({
   storage: storage,
 });
-
-const uid = new ShortUniqueId({ length: 10 });
 
 app.post("/api/upload-ipfs", upload.single("file"), async function (req, res) {
   try {
