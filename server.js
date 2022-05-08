@@ -8,10 +8,9 @@ const bodyParser = require("body-parser");
 const { create } = require("ipfs-http-client");
 const mongoose = require("mongoose");
 const findRemoveSync = require("find-remove");
-const ShortUniqueId = require("short-unique-id");
 const fs = require("fs");
 const gs = require("ghostscript-node");
-
+const short = require("short-uuid");
 dotenv.config();
 const crypto = require("crypto");
 
@@ -101,8 +100,6 @@ let upload = multer({
   storage: storage,
 });
 
-const uid = new ShortUniqueId({ length: 10 });
-
 app.post("/api/upload-ipfs", upload.single("file"), async function (req, res) {
   try {
     findRemoveSync(PATH, {
@@ -137,7 +134,7 @@ app.post("/api/upload-ipfs", upload.single("file"), async function (req, res) {
 
       let blockchain = {};
 
-      blockchain.mainFileId = req.body.id;
+      blockchain.mainFileId = req.body.id || short.generate();
       blockchain["fileName"] = req.file.originalname;
       res.status(200).json({
         mainFileId: req.body.id,
@@ -168,6 +165,11 @@ app.post("/api/save-database", async function (req, res) {
     transaction: uploadIpfsRes.transactionHistory,
     hash: uploadIpfsRes.hash.toString(),
     fileSize: uploadIpfsRes.size,
+    userId: uploadIpfsRes.userId,
+    documentHolderName: uploadIpfsRes.documentHolderName || "",
+    issueDate: uploadIpfsRes.issueDate || null,
+    expireDate: uploadIpfsRes.expireDate || null,
+    refNo: uploadIpfsRes.refNo || null,
   });
 
   res.status(200).json(updatedCandidate);
@@ -276,6 +278,15 @@ app.post(
     res.status(200).send({ hash });
   }
 );
+
+app.post("/api/get-dashboard-data", async function (req, res) {
+  const { userId } = req.body;
+  let data = await Binance.find({
+    userId,
+  });
+
+  res.status(200).send(data);
+});
 
 //
 

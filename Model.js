@@ -18,9 +18,24 @@ const binanceSchema = mongoose.Schema(
       type: "string",
       required: false,
     },
+    userId: {
+      type: "string",
+      required: true,
+    },
+    documentHolderName: {
+      type: "string",
+    },
+    issueDate: {
+      type: "date",
+    },
+    expireDate: {
+      type: "date",
+    },
+    refNo: {
+      type: "string",
+    },
     fileSize: {
       type: "number",
-      required: false,
     },
 
     mainFileId: {
@@ -29,6 +44,10 @@ const binanceSchema = mongoose.Schema(
     },
     hash: {
       type: "string",
+    },
+    totalVerificationCount: {
+      type: "number",
+      default: 0,
     },
     createdAt: {
       type: "string",
