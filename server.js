@@ -10,7 +10,8 @@ const mongoose = require("mongoose");
 const findRemoveSync = require("find-remove");
 const fs = require("fs");
 const gs = require("ghostscript-node");
-
+const short = require("short-uuid");
+const moment = require("moment");
 dotenv.config();
 const crypto = require("crypto");
 
@@ -101,6 +102,15 @@ let upload = multer({
 });
 
 app.post("/api/upload-ipfs", upload.single("file"), async function (req, res) {
+  if (req.body.id) {
+    let file = await Binance.findOne({
+      mainFileId: req.body.id,
+    });
+
+    if (file) {
+      res.status(400).json("Something went wrong");
+    }
+  }
   try {
     findRemoveSync(PATH, {
       age: { seconds: 10 },
@@ -133,11 +143,11 @@ app.post("/api/upload-ipfs", upload.single("file"), async function (req, res) {
       );
 
       let blockchain = {};
-
-      blockchain.mainFileId = req.body.id;
+      console.log(req.file);
+      blockchain.mainFileId = req.body.id || short.generate();
       blockchain["fileName"] = req.file.originalname;
       res.status(200).json({
-        mainFileId: req.body.id,
+        mainFileId: blockchain.mainFileId,
         fileName: req.file.originalname,
         hash: hash,
         size: req.file.size,
@@ -158,16 +168,25 @@ app.post("/api/upload-ipfs", upload.single("file"), async function (req, res) {
 
 app.post("/api/save-database", async function (req, res) {
   const { uploadIpfsRes } = req.body;
+  console.log({ uploadIpfsRes });
+  try {
+    let updatedCandidate = await Binance.create({
+      mainFileId: uploadIpfsRes.mainFileId,
+      fileName: uploadIpfsRes.fileName,
+      transaction: uploadIpfsRes.transactionHistory,
+      hash: uploadIpfsRes?.hash?.toString(),
+      fileSize: uploadIpfsRes.size,
+      userId: uploadIpfsRes.userId,
+      documentHolderName: uploadIpfsRes.documentHolderName || "",
+      issueDate: uploadIpfsRes.issueDate || null,
+      expireDate: uploadIpfsRes.expireDate || null,
+      refNo: uploadIpfsRes.refNo || null,
+    });
 
-  let updatedCandidate = await Binance.create({
-    mainFileId: uploadIpfsRes.mainFileId,
-    fileName: uploadIpfsRes.fileName,
-    transaction: uploadIpfsRes.transactionHistory,
-    hash: uploadIpfsRes.hash.toString(),
-    fileSize: uploadIpfsRes.size,
-  });
-
-  res.status(200).json(updatedCandidate);
+    res.status(200).json(updatedCandidate);
+  } catch (error) {
+    res.status(400).json("Something went wrong");
+  }
 });
 
 app.post("/api/get-blockchain-file", async function (req, res) {
@@ -274,7 +293,215 @@ app.post(
   }
 );
 
-//
+app.post("/api/get-dashboard-document-count", async function (req, res) {
+  const { userId } = req.body;
+  // let data = await Binance.find({
+  //   userId,
+  // });
+  // console.log({ data });
+  console.log(userId);
+  const FIRST_MONTH = 1;
+  const LAST_MONTH = 12;
+  const MONTHS_ARRAY = [
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
+  ];
+
+  let TODAY = new Date().toISOString();
+  let MONTH_BEFORE = moment(Date.now()).subtract(5, "months").format();
+  Binance.aggregate([
+    {
+      $match: {
+        userId: String(userId),
+        createdAt: { $gte: MONTH_BEFORE, $lte: TODAY },
+      },
+    },
+    {
+      $group: {
+        _id: { year_month: { $substrCP: ["$createdAt", 0, 7] } },
+        count: { $sum: 1 },
+      },
+    },
+    {
+      $sort: { "_id.year_month": 1 },
+    },
+    {
+      $project: {
+        _id: 0,
+        count: 1,
+        month_year: {
+          $concat: [
+            {
+              $arrayElemAt: [
+                MONTHS_ARRAY,
+                {
+                  $subtract: [
+                    { $toInt: { $substrCP: ["$_id.year_month", 5, 2] } },
+                    1,
+                  ],
+                },
+              ],
+            },
+            "-",
+            { $substrCP: ["$_id.year_month", 0, 4] },
+          ],
+        },
+      },
+    },
+    {
+      $group: {
+        _id: null,
+        data: { $push: { k: "$month_year", v: "$count" } },
+      },
+    },
+    {
+      $addFields: {
+        start_year: { $substrCP: [MONTH_BEFORE, 0, 4] },
+        end_year: { $substrCP: [TODAY, 0, 4] },
+        months1: {
+          $range: [
+            { $toInt: { $substrCP: [MONTH_BEFORE, 5, 2] } },
+            { $add: [LAST_MONTH, 1] },
+          ],
+        },
+        months2: {
+          $range: [
+            FIRST_MONTH,
+            { $add: [{ $toInt: { $substrCP: [TODAY, 5, 2] } }, 1] },
+          ],
+        },
+      },
+    },
+    {
+      $addFields: {
+        template_data: {
+          $concatArrays: [
+            {
+              $map: {
+                input: "$months1",
+                as: "m1",
+                in: {
+                  count: 0,
+                  month_year: {
+                    $concat: [
+                      {
+                        $arrayElemAt: [
+                          MONTHS_ARRAY,
+                          { $subtract: ["$$m1", 1] },
+                        ],
+                      },
+                      "-",
+                      "$start_year",
+                    ],
+                  },
+                },
+              },
+            },
+            {
+              $map: {
+                input: "$months2",
+                as: "m2",
+                in: {
+                  count: 0,
+                  month_year: {
+                    $concat: [
+                      {
+                        $arrayElemAt: [
+                          MONTHS_ARRAY,
+                          { $subtract: ["$$m2", 1] },
+                        ],
+                      },
+                      "-",
+                      "$end_year",
+                    ],
+                  },
+                },
+              },
+            },
+          ],
+        },
+      },
+    },
+    {
+      $addFields: {
+        data: {
+          $map: {
+            input: "$template_data",
+            as: "t",
+            in: {
+              k: "$$t.month_year",
+              v: {
+                $reduce: {
+                  input: "$data",
+                  initialValue: 0,
+                  in: {
+                    $cond: [
+                      { $eq: ["$$t.month_year", "$$this.k"] },
+                      { $add: ["$$this.v", "$$value"] },
+                      { $add: [0, "$$value"] },
+                    ],
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    {
+      $project: {
+        data: { $arrayToObject: "$data" },
+        _id: 0,
+      },
+    },
+  ])
+    .exec()
+    .then(async (data) => {
+      const obj = {};
+      obj.data = data;
+      try {
+        const documentCount = await Binance.count({ userId });
+        obj.documentCount = documentCount;
+        res.status(200).json(obj);
+      } catch (error) {
+        console.log(error);
+      }
+    })
+    .catch((err) => res.status(400).json("Something went wrong"));
+});
+
+app.get("/api/get-blockchain-list", async function (req, res, next) {
+  console.log(req.query);
+  const page = parseInt(req.query.page);
+  const limit = parseInt(req.query.limit);
+  const skipIndex = (page - 1) * limit;
+  let results = {};
+
+  try {
+    results.data = await Binance.find({ userId: req.query.userId })
+      .sort({ createdAt: 1 })
+      .limit(limit)
+      .skip(skipIndex)
+      .exec();
+    results.page = page;
+    results.limit = limit;
+    results.total = await Binance.count({ userId: req.query.userId });
+    res.status(200).json(results);
+  } catch (e) {
+    console.log(e);
+    res.status(500).json({ message: "Error Occured" });
+  }
+});
 
 //end here------------------------------------------------------------------------
 var dir = `${__dirname}/public`;

@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const moment = require("moment");
 const binanceSchema = mongoose.Schema(
   {
     transaction: {
@@ -18,21 +19,41 @@ const binanceSchema = mongoose.Schema(
       type: "string",
       required: false,
     },
+    userId: {
+      type: "string",
+      required: true,
+    },
+    documentHolderName: {
+      type: "string",
+    },
+    issueDate: {
+      type: "date",
+    },
+    expireDate: {
+      type: "date",
+    },
+    refNo: {
+      type: "string",
+    },
     fileSize: {
       type: "number",
-      required: false,
     },
 
     mainFileId: {
       type: "string",
       required: false,
+      unique: true,
     },
     hash: {
       type: "string",
     },
+    totalVerificationCount: {
+      type: "number",
+      default: 0,
+    },
     createdAt: {
-      type: "string",
-      default: Date.now(),
+      type: String,
+      default: new Date().toISOString(),
     },
   },
 
