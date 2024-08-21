@@ -1,22 +1,22 @@
-const ObjectId = require('mongodb').ObjectId;
-const axios = require('axios');
-const findRemoveSync = require('find-remove');
-const gs = require('ghostscript-node');
-const moment = require('moment');
-const crypto = require('crypto');
-const Binance = require('../models/Binance');
-const { decrypt } = require('../helpers');
-const fs = require('fs');
-const mongoose = require('mongoose');
-const path = require('path');
+const ObjectId = require("mongodb").ObjectId;
+const axios = require("axios");
+const findRemoveSync = require("find-remove");
+const gs = require("ghostscript-node");
+const moment = require("moment");
+const crypto = require("crypto");
+const Binance = require("../models/Binance");
+const { decrypt } = require("../helpers");
+const fs = require("fs");
+const mongoose = require("mongoose");
+const path = require("path");
 const dirname = path.resolve();
-const web3 = require('../config/blockchain/web3');
-const verify = require('../config/blockchain/verify');
-const FileType = require('file-type');
-const puppeteer = require('puppeteer');
-const request = require('request');
-var DPATH = 'public/temp';
-var PATH = 'uploads/';
+const web3 = require("../config/blockchain/web3");
+const verify = require("../config/blockchain/verify");
+const FileType = require("file-type");
+const puppeteer = require("puppeteer");
+const request = require("request");
+var DPATH = "public/temp";
+var PATH = "uploads/";
 
 exports.saveToDatabase = async (req, res, next) => {
   const { uploadIpfsRes } = req.body;
@@ -25,17 +25,17 @@ exports.saveToDatabase = async (req, res, next) => {
       const saveToDB = await Binance.insertMany(uploadIpfsRes);
       res.status(200).json(saveToDB);
     } catch (error) {
-      res.status(400).json('Something went wrong');
+      res.status(400).json("Something went wrong");
     }
   } else {
     try {
       if (uploadIpfsRes.parent) {
         const parent = await Binance.findOne({ _id: uploadIpfsRes.parent });
         if (!parent)
-          return res.status(400).json({ message: 'Main document not found' });
+          return res.status(400).json({ message: "Main document not found" });
       }
       let updatedCandidate = await Binance.create({
-        mainFileId: uploadIpfsRes.mainFileId || '',
+        mainFileId: uploadIpfsRes.mainFileId || "",
         transaction: uploadIpfsRes.transactionHistory,
         hash: uploadIpfsRes?.hash?.toString(),
         fileSize: uploadIpfsRes.size,
@@ -48,7 +48,7 @@ exports.saveToDatabase = async (req, res, next) => {
       res.status(200).json(updatedCandidate);
     } catch (error) {
       console.log(error);
-      res.status(400).json('Something went wrong');
+      res.status(400).json("Something went wrong");
     }
   }
 };
@@ -56,12 +56,14 @@ exports.saveToDatabase = async (req, res, next) => {
 exports.updateToDatabase = async (req, res) => {
   try {
     const { updateIpfsRes } = req.body;
-    const file = await Binance.findById(updateIpfsRes._id);
-    file.fileInfo = updateIpfsRes.fileInfo;
-    const response = await file.save();
+    const response = await Binance.findByIdAndUpdate(
+      updateIpfsRes._id,
+      { $set: updateIpfsRes },
+      { new: true }
+    );
     res.status(200).json(response);
   } catch (error) {
-    res.status(400).json('Something went wrong');
+    res.status(400).json("Something went wrong");
   }
 };
 
@@ -76,7 +78,7 @@ exports.getBlockchainFile = async (req, res, next) => {
 
     res.status(200).send(update);
   } catch (error) {
-    res.status(400).json('Something went wrong');
+    res.status(400).json("Something went wrong");
   }
 };
 exports.getFileDatabase = async (req, res, next) => {
@@ -87,7 +89,7 @@ exports.getFileDatabase = async (req, res, next) => {
     });
     res.status(200).send(file);
   } catch (error) {
-    res.status(400).json('Something went wrong');
+    res.status(400).json("Something went wrong");
   }
 };
 
@@ -96,7 +98,7 @@ exports.downloadBlockchainFile = async (req, res, next) => {
   const PROJECTID = process.env.PROJECTID;
   const PROJECTSECRET = process.env.PROJECTSECRET;
   const auth =
-    'Basic ' + Buffer.from(PROJECTID + ':' + PROJECTSECRET).toString('base64');
+    "Basic " + Buffer.from(PROJECTID + ":" + PROJECTSECRET).toString("base64");
 
   const config = {
     headers: {
@@ -110,22 +112,22 @@ exports.downloadBlockchainFile = async (req, res, next) => {
     ipfsData = await axios.post(url, {}, config);
   } catch (err) {
     console.log(err);
-    res.status(400).json('Something went wrong');
+    res.status(400).json("Something went wrong");
   }
 
   try {
     findRemoveSync(DPATH, {
       age: { seconds: 10800 },
-      files: '*.*',
+      files: "*.*",
     });
   } catch (error) {
     console.log(error);
   }
-  const myStr = ipfsData.data.split(':');
+  const myStr = ipfsData.data.split(":");
   let pdfSha256Hash = myStr[0];
   let pdfSize = myStr[2];
   let pdfEncryptedString = myStr[1];
-  const hashIvContent = pdfSha256Hash.split(' ');
+  const hashIvContent = pdfSha256Hash.split(" ");
   const hash = {};
   hash.iv = hashIvContent[0];
   hash.content = hashIvContent[1];
@@ -137,13 +139,13 @@ exports.downloadBlockchainFile = async (req, res, next) => {
     fs.mkdirSync(dir);
     fs.mkdirSync(dir2);
   } catch (e) {
-    if (e.code != 'EEXIST') throw e;
+    if (e.code != "EEXIST") throw e;
   }
   const decryptbuffer = decrypt.decrypt(hash);
   const { mime: fileType } = await FileType.fromBuffer(decryptbuffer);
   //converting buffer to image
   const imagePdf = decryptbuffer;
-  if (fileType === 'application/pdf') {
+  if (fileType === "application/pdf") {
     try {
       const renderedPages = await gs.renderPDFPagesToPNG(imagePdf);
       fs.writeFile(
@@ -152,50 +154,50 @@ exports.downloadBlockchainFile = async (req, res, next) => {
         function (err, written) {
           if (err) console.log(err);
           else {
-            console.log('Successfully written');
+            console.log("Successfully written");
           }
         }
       );
     } catch (error) {
-      res.status(400).json('Something went wrong');
+      res.status(400).json("Something went wrong");
     }
 
     //done converting
     //res.json(response);
     fs.writeFile(`${dir2}/${ipfsFileHash}.pdf`, decryptbuffer, (err) => {
-      if (!err) console.log('Data written');
+      if (!err) console.log("Data written");
     });
     res.status(200).json({
       pdf: `temp/${ipfsFileHash}.pdf`,
       image: `temp/${ipfsFileHash}.jpg`,
       size: pdfSize,
       hash: pdfEncryptedString,
-      bufferToString: decryptbuffer.toString('base64'),
-      fileType: 'pdf',
+      bufferToString: decryptbuffer.toString("base64"),
+      fileType: "pdf",
     });
   } else {
     fs.writeFile(`${dir2}/${ipfsFileHash}.jpg`, decryptbuffer, (err) => {
-      if (!err) console.log('Data written');
+      if (!err) console.log("Data written");
     });
     res.status(200).json({
       image: `temp/${ipfsFileHash}.jpg`,
       size: pdfSize,
       hash: pdfEncryptedString,
-      bufferToString: decryptbuffer.toString('base64'),
-      fileType: 'image',
+      bufferToString: decryptbuffer.toString("base64"),
+      fileType: "image",
     });
   }
 };
 
 exports.getSha256Hash = async (req, res, next) => {
-  const sha256Hasher = crypto.createHmac('sha256', process.env.SECRETKEY);
+  const sha256Hasher = crypto.createHmac("sha256", process.env.SECRETKEY);
   const hash = sha256Hasher
     .update(fs.readFileSync(req.file.path))
-    .digest('hex');
+    .digest("hex");
   try {
     findRemoveSync(PATH, {
       age: { seconds: 10 },
-      files: '*.*',
+      files: "*.*",
     });
   } catch (error) {
     console.log(error);
@@ -219,22 +221,22 @@ exports.getDashboardDocumentCount = async (req, res, next) => {
   const FIRST_MONTH = 1;
   const LAST_MONTH = 12;
   const MONTHS_ARRAY = [
-    'January',
-    'February',
-    'March',
-    'April',
-    'May',
-    'June',
-    'July',
-    'August',
-    'September',
-    'October',
-    'November',
-    'December',
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
   ];
 
   let TODAY = new Date().toISOString();
-  let MONTH_BEFORE = moment(Date.now()).subtract(5, 'months').format();
+  let MONTH_BEFORE = moment(Date.now()).subtract(5, "months").format();
   Binance.aggregate([
     {
       $match: {
@@ -244,12 +246,12 @@ exports.getDashboardDocumentCount = async (req, res, next) => {
     },
     {
       $group: {
-        _id: { year_month: { $substrCP: ['$createdAtLocalTime', 0, 7] } },
+        _id: { year_month: { $substrCP: ["$createdAtLocalTime", 0, 7] } },
         count: { $sum: 1 },
       },
     },
     {
-      $sort: { '_id.year_month': 1 },
+      $sort: { "_id.year_month": 1 },
     },
     {
       $project: {
@@ -262,14 +264,14 @@ exports.getDashboardDocumentCount = async (req, res, next) => {
                 MONTHS_ARRAY,
                 {
                   $subtract: [
-                    { $toInt: { $substrCP: ['$_id.year_month', 5, 2] } },
+                    { $toInt: { $substrCP: ["$_id.year_month", 5, 2] } },
                     1,
                   ],
                 },
               ],
             },
-            '-',
-            { $substrCP: ['$_id.year_month', 0, 4] },
+            "-",
+            { $substrCP: ["$_id.year_month", 0, 4] },
           ],
         },
       },
@@ -277,7 +279,7 @@ exports.getDashboardDocumentCount = async (req, res, next) => {
     {
       $group: {
         _id: null,
-        data: { $push: { k: '$month_year', v: '$count' } },
+        data: { $push: { k: "$month_year", v: "$count" } },
       },
     },
     {
@@ -304,8 +306,8 @@ exports.getDashboardDocumentCount = async (req, res, next) => {
           $concatArrays: [
             {
               $map: {
-                input: '$months1',
-                as: 'm1',
+                input: "$months1",
+                as: "m1",
                 in: {
                   count: 0,
                   month_year: {
@@ -313,11 +315,11 @@ exports.getDashboardDocumentCount = async (req, res, next) => {
                       {
                         $arrayElemAt: [
                           MONTHS_ARRAY,
-                          { $subtract: ['$$m1', 1] },
+                          { $subtract: ["$$m1", 1] },
                         ],
                       },
-                      '-',
-                      '$start_year',
+                      "-",
+                      "$start_year",
                     ],
                   },
                 },
@@ -325,8 +327,8 @@ exports.getDashboardDocumentCount = async (req, res, next) => {
             },
             {
               $map: {
-                input: '$months2',
-                as: 'm2',
+                input: "$months2",
+                as: "m2",
                 in: {
                   count: 0,
                   month_year: {
@@ -334,11 +336,11 @@ exports.getDashboardDocumentCount = async (req, res, next) => {
                       {
                         $arrayElemAt: [
                           MONTHS_ARRAY,
-                          { $subtract: ['$$m2', 1] },
+                          { $subtract: ["$$m2", 1] },
                         ],
                       },
-                      '-',
-                      '$end_year',
+                      "-",
+                      "$end_year",
                     ],
                   },
                 },
@@ -352,19 +354,19 @@ exports.getDashboardDocumentCount = async (req, res, next) => {
       $addFields: {
         data: {
           $map: {
-            input: '$template_data',
-            as: 't',
+            input: "$template_data",
+            as: "t",
             in: {
-              k: '$$t.month_year',
+              k: "$$t.month_year",
               v: {
                 $reduce: {
-                  input: '$data',
+                  input: "$data",
                   initialValue: 0,
                   in: {
                     $cond: [
-                      { $eq: ['$$t.month_year', '$$this.k'] },
-                      { $add: ['$$this.v', '$$value'] },
-                      { $add: [0, '$$value'] },
+                      { $eq: ["$$t.month_year", "$$this.k"] },
+                      { $add: ["$$this.v", "$$value"] },
+                      { $add: [0, "$$value"] },
                     ],
                   },
                 },
@@ -376,7 +378,7 @@ exports.getDashboardDocumentCount = async (req, res, next) => {
     },
     {
       $project: {
-        data: { $arrayToObject: '$data' },
+        data: { $arrayToObject: "$data" },
         _id: 0,
       },
     },
@@ -395,12 +397,12 @@ exports.getDashboardDocumentCount = async (req, res, next) => {
         },
         {
           $group: {
-            _id: { year_month: { $substrCP: ['$createdAtLocalTime', 0, 7] } },
-            count: { $sum: '$totalVerificationCount' },
+            _id: { year_month: { $substrCP: ["$createdAtLocalTime", 0, 7] } },
+            count: { $sum: "$totalVerificationCount" },
           },
         },
         {
-          $sort: { '_id.year_month': 1 },
+          $sort: { "_id.year_month": 1 },
         },
         {
           $project: {
@@ -413,14 +415,14 @@ exports.getDashboardDocumentCount = async (req, res, next) => {
                     MONTHS_ARRAY,
                     {
                       $subtract: [
-                        { $toInt: { $substrCP: ['$_id.year_month', 5, 2] } },
+                        { $toInt: { $substrCP: ["$_id.year_month", 5, 2] } },
                         1,
                       ],
                     },
                   ],
                 },
-                '-',
-                { $substrCP: ['$_id.year_month', 0, 4] },
+                "-",
+                { $substrCP: ["$_id.year_month", 0, 4] },
               ],
             },
           },
@@ -428,7 +430,7 @@ exports.getDashboardDocumentCount = async (req, res, next) => {
         {
           $group: {
             _id: null,
-            data: { $push: { k: '$month_year', v: '$count' } },
+            data: { $push: { k: "$month_year", v: "$count" } },
           },
         },
         {
@@ -455,8 +457,8 @@ exports.getDashboardDocumentCount = async (req, res, next) => {
               $concatArrays: [
                 {
                   $map: {
-                    input: '$months1',
-                    as: 'm1',
+                    input: "$months1",
+                    as: "m1",
                     in: {
                       count: 0,
                       month_year: {
@@ -464,11 +466,11 @@ exports.getDashboardDocumentCount = async (req, res, next) => {
                           {
                             $arrayElemAt: [
                               MONTHS_ARRAY,
-                              { $subtract: ['$$m1', 1] },
+                              { $subtract: ["$$m1", 1] },
                             ],
                           },
-                          '-',
-                          '$start_year',
+                          "-",
+                          "$start_year",
                         ],
                       },
                     },
@@ -476,8 +478,8 @@ exports.getDashboardDocumentCount = async (req, res, next) => {
                 },
                 {
                   $map: {
-                    input: '$months2',
-                    as: 'm2',
+                    input: "$months2",
+                    as: "m2",
                     in: {
                       count: 0,
                       month_year: {
@@ -485,11 +487,11 @@ exports.getDashboardDocumentCount = async (req, res, next) => {
                           {
                             $arrayElemAt: [
                               MONTHS_ARRAY,
-                              { $subtract: ['$$m2', 1] },
+                              { $subtract: ["$$m2", 1] },
                             ],
                           },
-                          '-',
-                          '$end_year',
+                          "-",
+                          "$end_year",
                         ],
                       },
                     },
@@ -503,19 +505,19 @@ exports.getDashboardDocumentCount = async (req, res, next) => {
           $addFields: {
             data: {
               $map: {
-                input: '$template_data',
-                as: 't',
+                input: "$template_data",
+                as: "t",
                 in: {
-                  k: '$$t.month_year',
+                  k: "$$t.month_year",
                   v: {
                     $reduce: {
-                      input: '$data',
+                      input: "$data",
                       initialValue: 0,
                       in: {
                         $cond: [
-                          { $eq: ['$$t.month_year', '$$this.k'] },
-                          { $add: ['$$this.v', '$$value'] },
-                          { $add: [0, '$$value'] },
+                          { $eq: ["$$t.month_year", "$$this.k"] },
+                          { $add: ["$$this.v", "$$value"] },
+                          { $add: [0, "$$value"] },
                         ],
                       },
                     },
@@ -527,7 +529,7 @@ exports.getDashboardDocumentCount = async (req, res, next) => {
         },
         {
           $project: {
-            data: { $arrayToObject: '$data' },
+            data: { $arrayToObject: "$data" },
             _id: 0,
           },
         },
@@ -543,9 +545,9 @@ exports.getDashboardDocumentCount = async (req, res, next) => {
             console.log(error);
           }
         })
-        .catch((err) => res.status(400).json('Something went wrong'));
+        .catch((err) => res.status(400).json("Something went wrong"));
     })
-    .catch((err) => res.status(400).json('Something went wrong'));
+    .catch((err) => res.status(400).json("Something went wrong"));
 };
 
 exports.getBlockchainList = async (req, res, next) => {
@@ -570,43 +572,43 @@ exports.getBlockchainList = async (req, res, next) => {
       { $limit: limit },
       {
         $graphLookup: {
-          from: 'binances',
-          startWith: '$_id',
-          connectFromField: '_id',
-          connectToField: 'parent',
-          depthField: 'level',
-          as: 'children',
+          from: "binances",
+          startWith: "$_id",
+          connectFromField: "_id",
+          connectToField: "parent",
+          depthField: "level",
+          as: "children",
         },
       },
       {
         $unwind: {
-          path: '$children',
+          path: "$children",
           preserveNullAndEmptyArrays: true,
         },
       },
       {
         $sort: {
-          'children.level': 1,
+          "children.level": 1,
         },
       },
       {
         $group: {
-          _id: '$_id',
-          transaction: { $first: '$transaction' },
-          fileType: { $first: '$fileType' },
-          userId: { $first: '$userId' },
-          fileSize: { $first: '$fileSize' },
-          mainFileId: { $first: '$mainFileId' },
-          hash: { $first: '$hash' },
-          totalVerificationCount: { $first: '$totalVerificationCount' },
-          createdAtLocalTime: { $first: '$createdAtLocalTime' },
-          isDocumentIssued: { $first: '$isDocumentIssued' },
-          fileInfo: { $first: '$fileInfo' },
-          createdAt: { $first: '$createdAt' },
-          updatedAt: { $first: '$updatedAt' },
-          parent: { $first: '$parent' },
+          _id: "$_id",
+          transaction: { $first: "$transaction" },
+          fileType: { $first: "$fileType" },
+          userId: { $first: "$userId" },
+          fileSize: { $first: "$fileSize" },
+          mainFileId: { $first: "$mainFileId" },
+          hash: { $first: "$hash" },
+          totalVerificationCount: { $first: "$totalVerificationCount" },
+          createdAtLocalTime: { $first: "$createdAtLocalTime" },
+          isDocumentIssued: { $first: "$isDocumentIssued" },
+          fileInfo: { $first: "$fileInfo" },
+          createdAt: { $first: "$createdAt" },
+          updatedAt: { $first: "$updatedAt" },
+          parent: { $first: "$parent" },
           children: {
-            $push: '$children',
+            $push: "$children",
           },
         },
       },
@@ -699,28 +701,28 @@ exports.getBlockchainList = async (req, res, next) => {
       });
   } catch (e) {
     console.log(e);
-    res.status(500).json({ message: 'Error Occured' });
+    res.status(500).json({ message: "Error Occured" });
   }
 };
 
 exports.getBlockchainFileDetails = async (req, res, next) => {
   try {
     const result = await Binance.findById(req.query.id);
-    if (!result) res.status(400).json({ message: 'File not found' });
+    if (!result) res.status(400).json({ message: "File not found" });
     res.status(200).json(result);
   } catch (e) {
     console.log(e);
-    res.status(400).json({ message: 'Something went wrong!' });
+    res.status(400).json({ message: "Something went wrong!" });
   }
 };
 exports.verifyDocument = async (req, res, next) => {
-  const sha256Hasher = crypto.createHmac('sha256', process.env.SECRETKEY);
+  const sha256Hasher = crypto.createHmac("sha256", process.env.SECRETKEY);
   let hash;
   try {
-    hash = sha256Hasher.update(fs.readFileSync(req.file.path)).digest('hex');
+    hash = sha256Hasher.update(fs.readFileSync(req.file.path)).digest("hex");
     findRemoveSync(PATH, {
       age: { seconds: 10 },
-      files: '*.*',
+      files: "*.*",
     });
   } catch (error) {
     console.log(error);
@@ -785,7 +787,7 @@ exports.appScreenshot = async (req, res, next) => {
           try {
             findRemoveSync(verifyDir, {
               age: { seconds: 1800 },
-              files: '*.*',
+              files: "*.*",
             });
           } catch (error) {
             console.log(error);
@@ -794,11 +796,11 @@ exports.appScreenshot = async (req, res, next) => {
           try {
             fs.mkdirSync(verifyDir);
           } catch (e) {
-            if (e.code != 'EEXIST') throw e;
+            if (e.code != "EEXIST") throw e;
           }
 
           const browser = await puppeteer.launch({
-            args: ['--no-sandbox', '--disabled-setupid-sandbox'],
+            args: ["--no-sandbox", "--disabled-setupid-sandbox"],
           });
           const page = await browser.newPage();
           await page.setViewport({
@@ -814,11 +816,11 @@ exports.appScreenshot = async (req, res, next) => {
           await page.goto(link);
           await page.screenshot({
             path: `${verifyDir}/authentific-${result._id}.png`,
-            format: 'a4',
+            format: "a4",
           });
           await browser.close();
           const mobileScreenShot =
-            'verify/' + `authentific-${result._id}` + '.png';
+            "verify/" + `authentific-${result._id}` + ".png";
           res
             .status(200)
             .json({ success: true, info: result, mobileScreenShot });
@@ -828,7 +830,7 @@ exports.appScreenshot = async (req, res, next) => {
       }
     }
   } catch (error) {
-    res.status(200).json({ success: false, msg: 'Something went wrong!' });
+    res.status(200).json({ success: false, msg: "Something went wrong!" });
   }
 };
 exports.issueDocument = async (req, res, next) => {
@@ -839,7 +841,7 @@ exports.issueDocument = async (req, res, next) => {
     res.status(200).json(result);
   } catch (e) {
     console.log(e);
-    res.status(400).json({ message: 'Something went wrong!' });
+    res.status(400).json({ message: "Something went wrong!" });
   }
 };
 
@@ -853,7 +855,7 @@ exports.downloadFromBlockchain = async (req, res, next) => {
     res.status(200).json({ ipfsFileHash });
   } catch (e) {
     console.log(e);
-    res.status(400).json({ message: 'Something went wrong!' });
+    res.status(400).json({ message: "Something went wrong!" });
   }
 };
 
@@ -865,16 +867,16 @@ exports.downloadFromGoogleDrive = async (req, res, next) => {
           reject(err);
           return;
         }
-        if (res.headers['content-type'].includes('text/html')) {
+        if (res.headers["content-type"].includes("text/html")) {
           console.log(`This file (${url}) is not publicly shared.`);
           resolve(null);
           return;
         }
         const downloadedObj = {
           buffer: res.body,
-          fileType: res.headers['content-type'],
+          fileType: res.headers["content-type"],
           fileName: name,
-          size: res.headers['content-length'],
+          size: res.headers["content-length"],
           fileInfo,
         };
         // When you use the following script, you can save the downloaded image data as the file.
@@ -904,11 +906,11 @@ exports.downloadFromGoogleDrive = async (req, res, next) => {
           row[5]
         )}`,
         fileInfo: [
-          { inputLabel: 'Document Name', inputValue: `${row[1]}` },
-          { inputLabel: 'Document Holder Name', inputValue: `${row[2]}` },
-          { inputLabel: 'Document Holder Email', inputValue: `${row[3]}` },
-          { inputLabel: 'Document Number', inputValue: `${row[4]}` },
-          { inputLabel: 'Issue Date', inputValue: `${row[0]}` },
+          { inputLabel: "Document Name", inputValue: `${row[1]}` },
+          { inputLabel: "Document Holder Name", inputValue: `${row[2]}` },
+          { inputLabel: "Document Holder Email", inputValue: `${row[3]}` },
+          { inputLabel: "Document Number", inputValue: `${row[4]}` },
+          { inputLabel: "Issue Date", inputValue: `${row[0]}` },
         ],
       };
     });
@@ -919,7 +921,7 @@ exports.downloadFromGoogleDrive = async (req, res, next) => {
     if (hasNull) {
       res.status(200).json({
         buffers: null,
-        message: 'Some files are not publicly shared.',
+        message: "Some files are not publicly shared.",
       });
       return;
     }
