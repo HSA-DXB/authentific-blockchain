@@ -56,14 +56,35 @@ exports.saveToDatabase = async (req, res, next) => {
 exports.updateToDatabase = async (req, res) => {
   try {
     const { updateIpfsRes } = req.body;
-    const response = await Binance.findByIdAndUpdate(
+    console.log("Received updateIpfsRes:", updateIpfsRes);
+
+    if (!updateIpfsRes || !updateIpfsRes._id) {
+      return res.status(400).json({ error: "Invalid updateIpfsRes data" });
+    }
+
+    const existingDocument = await Binance.findById(updateIpfsRes._id);
+    if (!existingDocument) {
+      return res.status(404).json({ error: "Document not found" });
+    }
+
+    // Update all fields provided in updateIpfsRes
+    const updatedDocument = await Binance.findByIdAndUpdate(
       updateIpfsRes._id,
       { $set: updateIpfsRes },
       { new: true }
     );
-    res.status(200).json(response);
+
+    if (!updatedDocument) {
+      return res.status(500).json({ error: "Failed to update document" });
+    }
+
+    console.log("Updated document:", updatedDocument);
+    res.status(200).json(updatedDocument);
   } catch (error) {
-    res.status(400).json("Something went wrong");
+    console.error("Error updating document:", error);
+    res
+      .status(500)
+      .json({ error: "Something went wrong", details: error.message });
   }
 };
 
