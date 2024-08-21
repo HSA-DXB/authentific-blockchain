@@ -37,7 +37,7 @@ exports.saveToDatabase = async (req, res, next) => {
       let updatedCandidate = await Binance.create({
         mainFileId: uploadIpfsRes.mainFileId || "",
         transaction: uploadIpfsRes.transactionHistory,
-        hash: uploadIpfsRes?.hash?.toString() || null,
+        hash: uploadIpfsRes?.hash?.toString(),
         fileSize: uploadIpfsRes.size,
         userId: uploadIpfsRes.userId,
         fileType: uploadIpfsRes.fileType,

@@ -174,7 +174,7 @@ app.post("/api/save-database", async function (req, res) {
       mainFileId: uploadIpfsRes.mainFileId,
       fileName: uploadIpfsRes.fileName,
       transaction: uploadIpfsRes.transactionHistory,
-      hash: uploadIpfsRes?.hash?.toString(),
+      hash: uploadIpfsRes.hash ? uploadIpfsRes.hash.toString() : "",
       fileSize: uploadIpfsRes.size,
       userId: uploadIpfsRes.userId,
       documentHolderName: uploadIpfsRes.documentHolderName || "",
