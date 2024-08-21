@@ -7,14 +7,20 @@ node_modules
 coverage
 coverage.json
 typechain
+<<<<<<< HEAD
 public/temp/
 package-lock.json
 uploads/
+=======
+
+package-lock.json
+>>>>>>> develop
 
 #Hardhat files
 cache
 artifacts
 
+<<<<<<< HEAD
 node_modules
 .env
 coverage
@@ -24,3 +30,6 @@ typechain
 #Hardhat files
 cache
 artifacts
+=======
+blockchain.zip
+>>>>>>> develop
