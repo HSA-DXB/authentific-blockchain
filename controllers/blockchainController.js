@@ -70,7 +70,12 @@ exports.updateToDatabase = async (req, res) => {
     // Update all fields provided in updateIpfsRes
     const updatedDocument = await Binance.findByIdAndUpdate(
       updateIpfsRes._id,
-      { $set: updateIpfsRes },
+      {
+        $set: {
+          ...updateIpfsRes,
+          transaction: uploadIpfsRes.transactionHistory,
+        },
+      },
       { new: true }
     );
 
