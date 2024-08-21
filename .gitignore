@@ -11,9 +11,11 @@ public/temp/
 package-lock.json
 uploads/
 
+
 #Hardhat files
 cache
 artifacts
+blockchain.zip
 
 node_modules
 .env
@@ -21,6 +23,5 @@ coverage
 coverage.json
 typechain
 
-#Hardhat files
-cache
-artifacts
+
+
