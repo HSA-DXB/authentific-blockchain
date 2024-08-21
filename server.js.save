@@ -508,3 +508,7 @@ var dir = `${__dirname}/public`;
 app.use(express.static(dir));
 const port = process.env.PORT || 5000;
 app.listen(port, console.log(`Server running on port ${port} `));
+<<<<<<< HEAD
+>>>>>>> develop
+=======
+>>>>>>> f0adaec783b55fbd67f9de3b570dfa98086560f1
