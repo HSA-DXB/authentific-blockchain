@@ -37,7 +37,7 @@ exports.saveToDatabase = async (req, res, next) => {
       let updatedCandidate = await Binance.create({
         mainFileId: uploadIpfsRes.mainFileId || "",
         transaction: uploadIpfsRes.transactionHistory,
-        hash: uploadIpfsRes?.hash?.toString(),
+        hash: uploadIpfsRes?.hash?.toString() || null,
         fileSize: uploadIpfsRes.size,
         userId: uploadIpfsRes.userId,
         fileType: uploadIpfsRes.fileType,
@@ -70,7 +70,12 @@ exports.updateToDatabase = async (req, res) => {
     // Update all fields provided in updateIpfsRes
     const updatedDocument = await Binance.findByIdAndUpdate(
       updateIpfsRes._id,
-      { $set: updateIpfsRes },
+      {
+        $set: {
+          ...updateIpfsRes,
+          transaction: uploadIpfsRes.transactionHistory,
+        },
+      },
       { new: true }
     );
 
