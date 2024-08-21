@@ -73,7 +73,7 @@ exports.updateToDatabase = async (req, res) => {
       {
         $set: {
           ...updateIpfsRes,
-          transaction: uploadIpfsRes.transactionHistory,
+          transaction: updateIpfsRes.transactionHistory,
         },
       },
       { new: true }
