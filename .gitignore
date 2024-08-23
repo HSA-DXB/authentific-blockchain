@@ -16,6 +16,7 @@ uploads/
 cache
 artifacts
 blockchain.zip
+node_modules.zip
 
 node_modules
 .env
