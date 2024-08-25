@@ -111,10 +111,11 @@ exports.getFileDatabase = async (req, res, next) => {
   try {
     const { id } = req.body;
     let file = await Binance.findOne({
-      _id: mongoose.Types.ObjectId(id),
+      _id: new mongoose.Types.ObjectId(id),
     });
     res.status(200).send(file);
   } catch (error) {
+    console.log(error);
     res.status(400).json("Something went wrong");
   }
 };
@@ -564,7 +565,7 @@ exports.getDashboardDocumentCount = async (req, res, next) => {
         .then(async (result) => {
           try {
             obj.verifyCount = result[0];
-            const documentCount = await Binance.count({ userId });
+            const documentCount = await Binance.countDocuments({ userId });
             obj.documentCount = documentCount;
             res.status(200).json(obj);
           } catch (error) {
@@ -719,7 +720,7 @@ exports.getBlockchainList = async (req, res, next) => {
         results.data = result;
         results.page = page;
         results.limit = limit;
-        results.total = await Binance.count({
+        results.total = await Binance.countDocuments({
           userId: req.query.userId,
           parent: null,
         });
@@ -861,7 +862,7 @@ exports.appScreenshot = async (req, res, next) => {
 };
 exports.issueDocument = async (req, res, next) => {
   try {
-    const result = await Binance.findByIdAndUpdate(ObjectId(req.query.id), {
+    const result = await Binance.findByIdAndUpdate(new ObjectId(req.query.id), {
       isDocumentIssued: true,
     });
     res.status(200).json(result);
