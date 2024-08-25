@@ -115,8 +115,8 @@ exports.getFileDatabase = async (req, res, next) => {
     });
     res.status(200).send(file);
   } catch (error) {
-  	console.log(error);
-	res.status(400).json("Something went wrong");
+    console.log(error);
+    res.status(400).json("Something went wrong");
   }
 };
 
@@ -862,7 +862,7 @@ exports.appScreenshot = async (req, res, next) => {
 };
 exports.issueDocument = async (req, res, next) => {
   try {
-    const result = await Binance.findByIdAndUpdate(ObjectId(req.query.id), {
+    const result = await Binance.findByIdAndUpdate(new ObjectId(req.query.id), {
       isDocumentIssued: true,
     });
     res.status(200).json(result);
